@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem("token");
@@ -12,18 +12,34 @@ async function apiRequest(endpoint, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
 
-  const data = await response.json();
+  try {
+    const response = await fetch(`${API_URL}${cleanEndpoint}`, {
+      ...options,
+      headers,
+    });
 
-  if (!response.ok) {
-    throw new Error(data.message || "Something went wrong");
+    let data;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      data = { message: await response.text() };
+    }
+
+    if (!response.ok) {
+      throw new Error(data.message || `Request failed with status ${response.status}`);
+    }
+
+    return data;
+  } catch (err) {
+    // If backend is offline or network fails, forward error cleanly
+    if (err.name === "TypeError" && err.message.includes("fetch")) {
+      throw new Error("Unable to connect to HealthSaathi backend. Please verify server status.");
+    }
+    throw err;
   }
-
-  return data;
 }
 
 export const api = {
