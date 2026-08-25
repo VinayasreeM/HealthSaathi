@@ -9,117 +9,18 @@ import Unauthorized from "../pages/Unauthorized";
 import { ProtectedRoute, PublicOnlyRoute } from "../components/ProtectedRoute";
 import Loading from "../components/Loading";
 
-// Icons for placeholder areas
-import { Stethoscope, Heart, LogOut, Activity } from "lucide-react";
-
-/**
- * Placeholder view for Doctor Area
- * (Actual Doctor Dashboard will be implemented by teammates later)
- */
-function DoctorArea() {
-  const { user, logout } = useAuth();
-  return (
-    <div style={{
-      minHeight: "100vh",
-      background: "var(--bg-main)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "2rem"
-    }}>
-      <div className="card" style={{ maxWidth: "480px", width: "100%", textAlign: "center", padding: "2.5rem 2rem" }}>
-        <div style={{
-          width: "60px",
-          height: "60px",
-          borderRadius: "50%",
-          background: "var(--primary-100)",
-          color: "var(--primary-700)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          margin: "0 auto 1.25rem"
-        }}>
-          <Stethoscope size={30} />
-        </div>
-        <span className="badge badge-primary" style={{ marginBottom: "0.5rem" }}>
-          Protected Role: Doctor
-        </span>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: "700", color: "var(--slate-900)", marginBottom: "0.5rem" }}>
-          Doctor area
-        </h1>
-        <p style={{ color: "var(--slate-500)", fontSize: "0.95rem", marginBottom: "1.5rem" }}>
-          Welcome, <strong>{user?.name}</strong> ({user?.email}).
-          <br />
-          Doctor dashboard placeholder for authentication & route testing.
-        </p>
-        <button
-          onClick={logout}
-          className="btn btn-danger"
-          style={{ width: "100%", justifyContent: "center" }}
-        >
-          <LogOut size={16} />
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Placeholder view for Patient Area
- * (Actual Patient Dashboard will be implemented by teammates later)
- */
-function PatientArea() {
-  const { user, logout } = useAuth();
-  return (
-    <div style={{
-      minHeight: "100vh",
-      background: "var(--bg-main)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "2rem"
-    }}>
-      <div className="card" style={{ maxWidth: "480px", width: "100%", textAlign: "center", padding: "2.5rem 2rem" }}>
-        <div style={{
-          width: "60px",
-          height: "60px",
-          borderRadius: "50%",
-          background: "var(--emerald-100)",
-          color: "var(--emerald-700)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          margin: "0 auto 1.25rem"
-        }}>
-          <Heart size={30} />
-        </div>
-        <span className="badge badge-success" style={{ marginBottom: "0.5rem" }}>
-          Protected Role: Patient
-        </span>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: "700", color: "var(--slate-900)", marginBottom: "0.5rem" }}>
-          Patient area
-        </h1>
-        <p style={{ color: "var(--slate-500)", fontSize: "0.95rem", marginBottom: "1.5rem" }}>
-          Welcome, <strong>{user?.name}</strong> ({user?.email}).
-          <br />
-          Patient dashboard placeholder for authentication & route testing.
-        </p>
-        <button
-          onClick={logout}
-          className="btn btn-danger"
-          style={{ width: "100%", justifyContent: "center" }}
-        >
-          <LogOut size={16} />
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
-  );
-}
+// Doctor Pages
+import DoctorDashboard from "../pages/doctor/DoctorDashboard";
+import PatientList from "../pages/doctor/PatientList";
+import PatientDetails from "../pages/doctor/PatientDetails";
+import CreatePrescription from "../pages/doctor/CreatePrescription";
+import Appointments from "../pages/doctor/Appointments";
+import FollowUps from "../pages/doctor/FollowUps";
 
 /**
  * Root Landing Redirect
+ * Sends users to the correct dashboard based on their role,
+ * or to login if not authenticated.
  */
 function RootRedirect() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -132,7 +33,7 @@ function RootRedirect() {
     return <Navigate to="/login" replace />;
   }
 
-  return <Navigate to={user.role === "doctor" ? "/doctor" : "/patient"} replace />;
+  return <Navigate to={user.role === "doctor" ? "/doctor/dashboard" : "/patient"} replace />;
 }
 
 export default function AppRoutes() {
@@ -163,22 +64,78 @@ export default function AppRoutes() {
         {/* Unauthorized Route */}
         <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* Doctor Protected Route */}
+        {/* Doctor Protected Routes */}
         <Route
           path="/doctor"
           element={
             <ProtectedRoute allowedRoles={["doctor"]}>
-              <DoctorArea />
+              <Navigate to="/doctor/dashboard" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/patients"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <PatientList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/patients/:patientId"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <PatientDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/patients/:patientId/prescription"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <CreatePrescription />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/prescription"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <CreatePrescription />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <Appointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/follow-ups"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <FollowUps />
             </ProtectedRoute>
           }
         />
 
-        {/* Patient Protected Route */}
+        {/* Patient Protected Route (placeholder until patient branch merges) */}
         <Route
           path="/patient"
           element={
             <ProtectedRoute allowedRoles={["patient"]}>
-              <PatientArea />
+              <Navigate to="/patient/dashboard" replace />
             </ProtectedRoute>
           }
         />
