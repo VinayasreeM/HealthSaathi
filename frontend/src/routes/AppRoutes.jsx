@@ -1,60 +1,148 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
+// Auth Pages & Components
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
+import Unauthorized from "../pages/Unauthorized";
+import { ProtectedRoute, PublicOnlyRoute } from "../components/ProtectedRoute";
+import Loading from "../components/Loading";
 
+// Doctor Pages
 import DoctorDashboard from "../pages/doctor/DoctorDashboard";
 import PatientList from "../pages/doctor/PatientList";
 import PatientDetails from "../pages/doctor/PatientDetails";
 import CreatePrescription from "../pages/doctor/CreatePrescription";
+import Appointments from "../pages/doctor/Appointments";
 import FollowUps from "../pages/doctor/FollowUps";
 
-import PatientDashboard from "../pages/patient/PatientDashboard";
-import MedicalHistory from "../pages/patient/MedicalHistory";
-import Prescriptions from "../pages/patient/Prescriptions";
-import Medications from "../pages/patient/Medications";
-import Appointments from "../pages/patient/Appointments";
-import Recommendations from "../pages/patient/Recommendations";
+/**
+ * Root Landing Redirect
+ * Sends users to the correct dashboard based on their role,
+ * or to login if not authenticated.
+ */
+function RootRedirect() {
+  const { user, loading, isAuthenticated } = useAuth();
 
-function AppRoutes() {
+  if (loading) {
+    return <Loading message="Checking your session..." />;
+  }
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Navigate to={user.role === "doctor" ? "/doctor/dashboard" : "/patient"} replace />;
+}
+
+export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Root Redirect */}
+        <Route path="/" element={<RootRedirect />} />
 
-        {/* Authentication */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {/* Public Auth Routes */}
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicOnlyRoute>
+              <Register />
+            </PublicOnlyRoute>
+          }
+        />
 
-        {/* Doctor */}
-        <Route path="/doctor" element={<DoctorDashboard />} />
-        <Route path="/doctor/patients" element={<PatientList />} />
-        <Route path="/doctor/patients/:id" element={<PatientDetails />} />
+        {/* Unauthorized Route */}
+        <Route path="/unauthorized" element={<Unauthorized />} />
+
+        {/* Doctor Protected Routes */}
+        <Route
+          path="/doctor"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <Navigate to="/doctor/dashboard" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/patients"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <PatientList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/patients/:patientId"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <PatientDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/patients/:patientId/prescription"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <CreatePrescription />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/doctor/prescription"
-          element={<CreatePrescription />}
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <CreatePrescription />
+            </ProtectedRoute>
+          }
         />
-        <Route path="/doctor/follow-ups" element={<FollowUps />} />
+        <Route
+          path="/doctor/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <Appointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/follow-ups"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <FollowUps />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Patient */}
-        <Route path="/patient" element={<PatientDashboard />} />
+        {/* Patient Protected Route (placeholder until patient branch merges) */}
         <Route
-          path="/patient/medical-history"
-          element={<MedicalHistory />}
-        />
-        <Route
-          path="/patient/prescriptions"
-          element={<Prescriptions />}
-        />
-        <Route path="/patient/medications" element={<Medications />} />
-        <Route path="/patient/appointments" element={<Appointments />} />
-        <Route
-          path="/patient/recommendations"
-          element={<Recommendations />}
+          path="/patient"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]}>
+              <Navigate to="/patient/dashboard" replace />
+            </ProtectedRoute>
+          }
         />
 
+        {/* Catch-all fallback */}
+        <Route path="*" element={<RootRedirect />} />
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default AppRoutes;

@@ -1,5 +1,9 @@
 require("dotenv").config();
-const mongoose = require("mongoose");
+
+const dns = require("dns");
+
+dns.setServers(["10.62.251.48"]);
+
 const app = require("./app");
 const connectDB = require("./config/db");
 const { startReminderScheduler } = require("./services/reminderService");
@@ -17,6 +21,7 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error("Server startup failed:", error.message);
+    process.exit(1);
   }
 };
 
