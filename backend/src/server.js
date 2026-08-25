@@ -1,7 +1,7 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const app = require("./app");
-const connectDB = require("./db");
+const connectDB = require("./config/db");
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
@@ -21,8 +21,16 @@ if (cleanMongoUri && cleanMongoUri.startsWith("mongodb")) {
   console.log("No valid MongoDB URI configured. Running in memory / stateless mode.");
 }
 
-connectDB();
+const startServer = async () => {
+  try {
+    await connectDB();
 
-app.listen(PORT, () => {
-  console.log(`HealthSaathi backend running on port ${PORT}`);
-});
+    app.listen(PORT, () => {
+      console.log(`HealthSaathi backend running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Server startup failed:", error.message);
+  }
+};
+
+startServer();
