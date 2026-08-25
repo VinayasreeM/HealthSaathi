@@ -1,3 +1,23 @@
+// Official Twilio Node.js SDK client — initialized once as singleton
+let _twilioClient = null;
+function getTwilioClient() {
+  if (_twilioClient) return _twilioClient;
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!accountSid || !authToken) {
+    console.warn("[TwilioService] TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not configured.");
+    return null;
+  }
+  try {
+    const twilio = require("twilio");
+    _twilioClient = twilio(accountSid, authToken);
+    return _twilioClient;
+  } catch (err) {
+    console.error("[TwilioService] Failed to initialize Twilio client:", err.message);
+    return null;
+  }
+}
+
 const MESSAGES = {
   welcomeLanguagePrompt: `🏥 Welcome to RuralCare
 
@@ -209,52 +229,74 @@ function generateTwiMLMessage(body) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n  <Message>${sanitized}</Message>\n</Response>`;
 }
 
-async function sendWhatsAppMessage(to, body) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER;
+function formatWhatsAppNumber(num) {
+  let clean = String(num || "").trim();
+  if (!clean.startsWith("whatsapp:")) {
+    // Strip any non-digit/non-plus chars except existing whatsapp prefix
+    const digits = clean.replace(/[^\d+]/g, "");
+    const e164 = digits.startsWith("+") ? digits : `+${digits}`;
+    clean = `whatsapp:${e164}`;
+  }
+  return clean;
+}
 
-  if (!accountSid || !authToken || !fromNumber) {
+async function sendWhatsAppMessage(to, body) {
+  const fromRaw = process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER;
+  if (!fromRaw) {
+    console.warn("[TwilioService] TWILIO_WHATSAPP_NUMBER not configured.");
     return { success: false, reason: "TWILIO_NOT_CONFIGURED" };
   }
 
-  const formatE164 = (num) => {
-    let clean = String(num).replace(/^whatsapp:/i, "").replace(/[^\d+]/g, "");
-    if (!clean.startsWith("+")) {
-      clean = clean.length === 10 ? `+1${clean}` : `+${clean}`;
-    }
-    return `whatsapp:${clean}`;
-  };
+  const client = getTwilioClient();
+  if (!client) {
+    return { success: false, reason: "TWILIO_CLIENT_INIT_FAILED" };
+  }
 
-  const formattedTo = formatE164(to);
-  const formattedFrom = formatE164(fromNumber);
-
-  const authHeader = `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
-  const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-
-  const params = new URLSearchParams();
-  params.append("To", formattedTo);
-  params.append("From", formattedFrom);
-  params.append("Body", body);
+  const formattedTo = formatWhatsAppNumber(to);
+  const formattedFrom = formatWhatsAppNumber(fromRaw);
 
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
+    console.log(`[TwilioService] Sending WhatsApp to ${formattedTo} from ${formattedFrom}`);
+    const message = await client.messages.create({
+      to: formattedTo,
+      from: formattedFrom,
+      body,
     });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Twilio send error:", data);
-      return { success: false, error: data };
-    }
-    return { success: true, sid: data.sid };
+    console.log(`[TwilioService] WhatsApp sent. SID: ${message.sid}`);
+    return { success: true, sid: message.sid };
   } catch (error) {
-    console.error("Twilio network error:", error);
+    console.error("[TwilioService] WhatsApp send error:", error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+async function sendSMS(to, body) {
+  const fromRaw = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_WHATSAPP_NUMBER;
+  if (!fromRaw) {
+    console.warn("[TwilioService] TWILIO_PHONE_NUMBER not configured.");
+    return { success: false, reason: "TWILIO_NOT_CONFIGURED" };
+  }
+
+  const client = getTwilioClient();
+  if (!client) {
+    return { success: false, reason: "TWILIO_CLIENT_INIT_FAILED" };
+  }
+
+  // SMS uses plain E.164 number (no whatsapp: prefix)
+  const cleanTo = String(to).replace(/^whatsapp:/i, "").trim();
+  const cleanFrom = String(fromRaw).replace(/^whatsapp:/i, "").trim();
+
+  try {
+    console.log(`[TwilioService] Sending SMS to ${cleanTo}`);
+    const message = await client.messages.create({
+      to: cleanTo,
+      from: cleanFrom,
+      body,
+    });
+    console.log(`[TwilioService] SMS sent. SID: ${message.sid}`);
+    return { success: true, sid: message.sid };
+  } catch (error) {
+    console.error("[TwilioService] SMS send error:", error.message);
     return { success: false, error: error.message };
   }
 }
@@ -264,4 +306,6 @@ module.exports = {
   formatWhatsAppResponse,
   generateTwiMLMessage,
   sendWhatsAppMessage,
+  sendSMS,
+  getTwilioClient,
 };
