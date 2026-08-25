@@ -1,124 +1,146 @@
 /**
- * Demo seed script.
- * Usage:  npm run seed   (from the backend folder)
+ * Demo seed script - aligned with the merged backend models
+ * (User + Patient/Doctor profile docs, MedicalRecord, Prescription,
+ *  Medication, Triage, Notification).
  *
- * Creates:
- *   - Doctor account:  doctor@healthsaathi.com / doctor123
- *   - Patient account: patient@healthsaathi.com / patient123
- *   - One medical record, one prescription (+recommendations),
- *     one follow-up appointment, one AI triage result and notifications,
- *     all linked to the SAME patient so the Patient Dashboard has data.
+ * Usage: npm run seed   (from the backend folder)
  */
 require("dotenv").config();
 
 const mongoose = require("mongoose");
-const connectDB = require("./db");
+const connectDB = require("./config/db");
 const User = require("./models/User");
-const PatientProfile = require("./models/PatientProfile");
+const Patient = require("./models/Patient");
+const Doctor = require("./models/Doctor");
 const MedicalRecord = require("./models/MedicalRecord");
 const Prescription = require("./models/Prescription");
+const Medication = require("./models/Medication");
 const Appointment = require("./models/Appointment");
-const Recommendation = require("./models/Recommendation");
 const Triage = require("./models/Triage");
 const Notification = require("./models/Notification");
 
-async function upsertUser({ name, email, password, role }) {
-  let user = await User.findOne({ email });
-  if (!user) {
-    user = await User.create({ name, email, password, role });
-  }
+async function upsertUser({ name, email, phone, password, role }) {
+  // The merged User model has no pre-save hook - the auth controller
+  // hashes manually, so we do the same here.
+  const bcrypt = require("bcryptjs");
+  const hashed = await bcrypt.hash(password, 10);
+  const user = await User.findOneAndUpdate(
+    { email },
+    { $set: { name, email, phone, password: hashed, role } },
+    { new: true, upsert: true }
+  );
   return user;
 }
 
 async function seed() {
   await connectDB();
 
-  const doctor = await upsertUser({
+  // ---- Doctor ----
+  const doctorUser = await upsertUser({
     name: "Dr. Rahul Sharma",
     email: "doctor@healthsaathi.com",
+    phone: "+91 90000 00001",
     password: "doctor123",
     role: "doctor",
   });
 
-  const patient = await upsertUser({
+  let doctorDoc = await Doctor.findOne({ userId: doctorUser._id });
+  if (!doctorDoc) {
+    doctorDoc = await Doctor.create({
+      userId: doctorUser._id,
+      doctorId: "DOC-000001",
+      name: "Dr. Rahul Sharma",
+      specialization: "General Medicine",
+      phone: "+91 90000 00001",
+    });
+  }
+
+  // ---- Patient ----
+  const patientUser = await upsertUser({
     name: "Ravi Kumar",
     email: "patient@healthsaathi.com",
+    phone: "+91 98765 43210",
     password: "patient123",
     role: "patient",
   });
 
-  await PatientProfile.updateOne(
-    { user: patient._id },
-    {
-      $set: {
-        user: patient._id,
-        age: 45,
-        gender: "Male",
-        phone: "+91 98765 43210",
-        bloodGroup: "B+",
-        allergies: ["Penicillin"],
-        address: "12 Gandhi Road, Bengaluru, Karnataka",
-      },
-    },
-    { upsert: true }
-  );
+  let patientDoc = await Patient.findOne({ userId: patientUser._id });
+  if (!patientDoc) {
+    patientDoc = await Patient.create({
+      userId: patientUser._id,
+      patientId: "PAT-000001",
+      name: "Ravi Kumar",
+      age: 45,
+      gender: "Male",
+      phone: "+91 98765 43210",
+      address: "12 Gandhi Road, Bengaluru, Karnataka",
+      bloodGroup: "B+",
+      allergies: ["Penicillin"],
+    });
+  }
 
-  const existing = await MedicalRecord.countDocuments({ patient: patient._id });
+  const existing = await MedicalRecord.countDocuments({ patientId: patientDoc._id });
   if (existing === 0) {
-    await MedicalRecord.create({
-      patient: patient._id,
-      doctor: doctor._id,
+    const record = await MedicalRecord.create({
+      patientId: patientDoc._id,
+      doctorId: doctorDoc._id,
       visitDate: new Date(),
       symptoms: ["Fever", "Cough"],
-      diagnosis: "Respiratory Infection",
-      vitals: { bp: "120/80", temperature: "101 F", heartRate: "82 bpm" },
-      testReports: "CBC - mild elevated WBC",
-      notes: "Rest and maintain hydration.",
+      vitals: { bloodPressure: "120/80", temperature: 101, heartRate: 82 },
+      diagnosis: ["Respiratory Infection"],
+      testReports: ["CBC - mild elevated WBC"],
+      doctorNotes: "Rest and maintain hydration.",
     });
 
     const prescription = await Prescription.create({
-      patient: patient._id,
-      doctor: doctor._id,
+      patientId: patientDoc._id,
+      doctorId: doctorDoc._id,
+      medicalRecordId: record._id,
       diagnosis: "Hypertension",
       medicines: [
         {
           name: "Metformin",
           dosage: "500 mg",
           frequency: "Twice daily",
-          timing: "08:00 AM, 08:00 PM",
           duration: "30 days",
           instructions: "Take after food.",
         },
       ],
-      recommendations: "Reduce salt intake.\nDrink sufficient water.\nTake medicines on time.",
-      nextVisitDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // ~3 weeks out
-    });
-
-    await Recommendation.create({
-      patient: patient._id,
-      doctor: doctor._id,
-      items: [
+      recommendations: [
         "Reduce salt intake",
         "Drink sufficient water",
         "Take medicines on time",
         "Attend your follow-up appointment",
       ],
-      sourcePrescription: prescription._id,
+      nextVisitDate: new Date(Date.now() + 21 * 86400000),
     });
 
+    await Medication.create([
+      {
+        patientId: patientDoc._id,
+        prescriptionId: prescription._id,
+        medicineName: "Metformin",
+        dosage: "500 mg",
+        times: ["08:00 AM", "08:00 PM"],
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 86400000),
+        active: true,
+      },
+    ]);
+
     await Appointment.create({
-      patient: patient._id,
-      doctor: doctor._id,
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // ~1 week out
-      time: "10:30 AM",
+      patientId: patientDoc._id,
+      doctorId: doctorDoc._id,
+      appointmentDate: new Date(Date.now() + 7 * 86400000),
       reason: "Follow-up consultation",
+      status: "scheduled",
     });
 
     await Triage.create({
-      patient: patient._id,
+      patientId: patientDoc._id,
       priority: "MEDIUM",
       symptoms: ["Fever", "Cough"],
-      possibleConditions: "Respiratory infection",
+      possibleConditions: ["Respiratory infection"],
       recommendation:
         "Consult a healthcare professional if symptoms persist or worsen.",
       source: "whatsapp",
@@ -126,19 +148,19 @@ async function seed() {
 
     await Notification.create([
       {
-        patient: patient._id,
+        patient: patientDoc._id,
         type: "prescription",
         title: "New Prescription",
         message: "Your doctor has added a new prescription.",
       },
       {
-        patient: patient._id,
+        patient: patientDoc._id,
         type: "appointment",
         title: "Appointment Reminder",
         message: "Your appointment is coming up soon.",
       },
       {
-        patient: patient._id,
+        patient: patientDoc._id,
         type: "assessment",
         title: "AI Assessment",
         message: "Your latest assessment is available.",

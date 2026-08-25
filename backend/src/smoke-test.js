@@ -8,7 +8,7 @@
 require("dotenv").config();
 
 const app = require("./app");
-const connectDB = require("./db");
+const connectDB = require("./config/db");
 
 const PORT = 5050;
 const BASE = `http://127.0.0.1:${PORT}/api`;
@@ -93,7 +93,13 @@ async function main() {
     Authorization: `Bearer ${doctorAuth.token}`,
   };
 
-  const patientId = me.data.id;
+  // Doctor-side flows use the Patient document id, not the User id
+  res = await fetch(`${BASE}/doctors/me/patients`, {
+    headers: dHeaders,
+  });
+  const patientsList = (await res.json()).data;
+  const patientId = patientsList.find((p) => p.email === "patient@healthsaathi.com").id;
+  check("doctor lists patients", !!patientId);
   res = await fetch(`${BASE}/doctors/me/prescriptions`, {
     method: "POST",
     headers: dHeaders,

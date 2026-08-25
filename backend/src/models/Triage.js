@@ -2,27 +2,53 @@ const mongoose = require("mongoose");
 
 const triageSchema = new mongoose.Schema(
   {
-    patient: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+    patientId: {
+      type: mongoose.Schema.Types.Mixed,
+      required: false,
       index: true,
+    },
+    symptoms: {
+      type: [String],
+      default: [],
     },
     priority: {
       type: String,
-      enum: ["LOW", "MEDIUM", "HIGH"],
-      default: "LOW",
+      enum: ["HIGH", "MEDIUM", "LOW"],
+      required: true,
+      default: "MEDIUM",
     },
-    symptoms: [String],
-    possibleConditions: String,
-    recommendation: String,
+    possibleConditions: {
+      type: [String],
+      default: [],
+    },
+    redFlags: {
+      type: [String],
+      default: [],
+    },
+    recommendation: {
+      type: String,
+      required: true,
+    },
+    language: {
+      type: String,
+      enum: ["en", "hi", "te"],
+      default: "en",
+    },
     source: {
       type: String,
-      enum: ["whatsapp", "web", "system"],
-      default: "system",
+      enum: ["whatsapp", "website"],
+      default: "whatsapp",
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-module.exports = mongoose.model("Triage", triageSchema);
+const Triage = mongoose.models.Triage || mongoose.model("Triage", triageSchema);
+
+module.exports = Triage;

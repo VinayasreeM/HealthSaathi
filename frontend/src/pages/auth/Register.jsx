@@ -6,6 +6,7 @@ export default function Register() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     role: "patient",
   });
@@ -62,6 +63,18 @@ export default function Register() {
               value={form.email}
               onChange={update("email")}
               placeholder="you@example.com"
+              required
+            />
+          </div>
+
+          <div className="auth-field">
+            <label htmlFor="phone">Phone</label>
+            <input
+              id="phone"
+              type="tel"
+              value={form.phone}
+              onChange={update("phone")}
+              placeholder="+91 98765 43210"
               required
             />
           </div>
