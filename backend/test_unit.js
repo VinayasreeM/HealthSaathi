@@ -1,5 +1,6 @@
 require("dotenv").config();
 const assert = require("assert");
+const mongoose = require("mongoose");
 const app = require("./src/app");
 const {
   MESSAGES,
@@ -60,6 +61,13 @@ async function simulateRequest(method, path, body = {}, headers = {}) {
 }
 
 async function runUnitTests() {
+  const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  if (mongoUri && mongoUri.startsWith("mongodb")) {
+    try {
+      await mongoose.connect(mongoUri);
+    } catch (_) {}
+  }
+
   console.log("==================================================");
   console.log("🧪 RUNNING UNIT & WORKFLOW TESTS (OFFLINE)");
   console.log("==================================================\n");
@@ -293,6 +301,10 @@ async function runUnitTests() {
   console.log("==================================================");
   console.log(`🏁 ALL ${passed}/${total} UNIT TESTS PASSED!`);
   console.log("==================================================");
+
+  if (mongoose.connection.readyState === 1) {
+    await mongoose.disconnect();
+  }
 }
 
 runUnitTests().catch((err) => {
