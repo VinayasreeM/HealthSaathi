@@ -1,4 +1,8 @@
 const Prescription = require("../models/Prescription");
+const Patient = require("../models/Patient");
+const {
+  sendPrescriptionNotification,
+} = require("../services/notificationService");
 
 // Create a prescription
 const createPrescription = async (req, res) => {
@@ -22,6 +26,20 @@ const createPrescription = async (req, res) => {
       recommendations,
       nextVisitDate,
     });
+
+    // Send WhatsApp/SMS notification after prescription is saved
+    try {
+      const patient = await Patient.findById(patientId);
+
+      if (patient) {
+        await sendPrescriptionNotification(patient, prescription);
+      }
+    } catch (notificationError) {
+      console.warn(
+        "Prescription notification warning:",
+        notificationError.message
+      );
+    }
 
     res.status(201).json({
       success: true,
