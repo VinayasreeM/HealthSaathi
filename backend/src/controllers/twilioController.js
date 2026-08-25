@@ -119,11 +119,14 @@ async function saveTriageRecord(data) {
 
 async function handleWhatsAppWebhook(req, res) {
   try {
+    console.log("[Webhook] Twilio webhook received");
     const rawFrom = req.body.From || req.body.from || req.query.From || "";
     const rawBody = req.body.Body || req.body.body || req.query.Body || "";
 
     const phone = normalizePhone(rawFrom);
     const body = String(rawBody).trim();
+
+    console.log(`[Webhook] Message received from: ${phone}, body length: ${body.length}`);
 
     if (!phone) {
       const responseText = "Invalid request: Missing sender phone number.";
@@ -133,6 +136,7 @@ async function handleWhatsAppWebhook(req, res) {
     // Check if patient exists (if Patient model exists)
     const patient = await findExistingPatient(phone);
     const patientId = patient ? patient._id : phone;
+    console.log(`[Webhook] Patient found: ${patient ? 'yes' : 'no (using phone as ID)'}`);
 
     const conversation = await getOrCreateConversation(phone, patientId);
     let replyText = "";
@@ -170,6 +174,7 @@ async function handleWhatsAppWebhook(req, res) {
           // Direct symptoms sent right away
           conversation.language = detected;
           messageIntent = "SYMPTOM";
+          console.log(`[Webhook] Detected language: ${detected}. Starting Gemini analysis...`);
           try {
             const assessment = await analyzeSymptoms(body, detected);
             messageIntent = assessment.intent || "SYMPTOM";
@@ -213,8 +218,10 @@ async function handleWhatsAppWebhook(req, res) {
       } else {
         // Direct symptom message or inquiry
         messageIntent = "SYMPTOM";
+        console.log(`[Webhook] Symptom message. Language: ${lang}. Starting Gemini analysis...`);
         try {
           const assessment = await analyzeSymptoms(body, lang);
+          console.log(`[Webhook] Gemini response received. Priority: ${assessment.priority}`);
           messageIntent = assessment.intent || "SYMPTOM";
 
           // Save Triage record
@@ -228,6 +235,7 @@ async function handleWhatsAppWebhook(req, res) {
             language: lang,
             source: "whatsapp",
           });
+          console.log(`[Webhook] Triage saved for patient`);
 
           replyText = formatWhatsAppResponse(assessment, lang);
         } catch (err) {
@@ -255,6 +263,7 @@ async function handleWhatsAppWebhook(req, res) {
     }
 
     // Return TwiML XML response
+    console.log("[Webhook] WhatsApp response sent");
     res.type("text/xml");
     return res.status(200).send(generateTwiMLMessage(replyText));
   } catch (error) {
