@@ -1,4 +1,8 @@
 const Appointment = require("../models/Appointment");
+const Patient = require("../models/Patient");
+const {
+  sendAppointmentNotification,
+} = require("../services/notificationService");
 
 // Create an appointment
 const createAppointment = async (req, res) => {
@@ -18,6 +22,21 @@ const createAppointment = async (req, res) => {
       reason,
       status,
     });
+
+    // Send WhatsApp/SMS notification after appointment is created
+    // Notification failure should not fail the appointment creation.
+    try {
+      const patient = await Patient.findById(patientId);
+
+      if (patient) {
+        await sendAppointmentNotification(patient, appointment);
+      }
+    } catch (notificationError) {
+      console.warn(
+        "Appointment notification warning:",
+        notificationError.message
+      );
+    }
 
     res.status(201).json({
       success: true,
