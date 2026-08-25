@@ -1,6 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 
+const authRoutes = require("./routes/auth");
+const patientRoutes = require("./routes/patients");
+const doctorRoutes = require("./routes/doctors");
+
 const app = express();
 
 app.use(cors());
@@ -12,5 +16,9 @@ app.get("/api/health", (req, res) => {
     message: "HealthSaathi backend is running",
   });
 });
+
+app.use("/api/auth", authRoutes);
+app.use("/api/patients", patientRoutes);
+app.use("/api/doctors", doctorRoutes);
 
 module.exports = app;
