@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import DoctorLayout from "../../components/doctor/DoctorLayout";
 import {
   getPatientById,
@@ -53,6 +54,10 @@ export default function CreatePrescription() {
   const params = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+
+  const doctorName = user?.name || currentDoctor.name;
+  const doctorRegNumber = currentDoctor.regNumber;
 
   const patientIdParam = params.patientId || params.id || searchParams.get("patientId");
 
@@ -230,7 +235,7 @@ export default function CreatePrescription() {
               <FilePlusIcon size={20} />
               <div>
                 <h2>Digital Prescription & Treatment Plan</h2>
-                <p>Authorized Medical Practitioner: {currentDoctor.name} • {currentDoctor.regNumber}</p>
+                <p>Authorized Medical Practitioner: {doctorName} • {doctorRegNumber}</p>
               </div>
             </div>
           </div>
@@ -273,10 +278,10 @@ export default function CreatePrescription() {
                       <span className="pill-card-id">{patient.id}</span>
                       <span className="pill-card-tag">{patient.age} yrs • {patient.gender} • Blood {patient.bloodGroup || "N/A"}</span>
                     </div>
-                    {patient.allergies && patient.allergies.length > 0 && (
+                    {patient.allergies && (
                       <div className="pill-card-allergy-alert">
                         <ShieldAlertIcon size={14} />
-                        <span>Allergies: <strong>{patient.allergies.join(", ")}</strong></span>
+                        <span>Allergies: <strong>{Array.isArray(patient.allergies) ? patient.allergies.join(", ") : patient.allergies}</strong></span>
                       </div>
                     )}
                   </div>

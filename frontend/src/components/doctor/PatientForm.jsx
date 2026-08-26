@@ -1,26 +1,62 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { UserIcon, XIcon } from "../common/Icons";
 
-export default function PatientForm({ isOpen, onClose, onSave }) {
-  const [formData, setFormData] = useState({
-    name: "",
-    age: "",
-    gender: "Male",
-    risk: "MEDIUM",
-    phone: "",
-    address: "",
-    bloodGroup: "O+",
-    allergies: "None",
-    mainIssue: "",
-  });
+/**
+ * PatientForm - Supports both Add New Patient and Edit Patient modes
+ *
+ * Props:
+ *  - isOpen: boolean
+ *  - onClose: function
+ *  - onSave: function(patientData) — receives the form data
+ *  - editPatient: object | null — if provided, form is pre-filled for editing
+ */
+export default function PatientForm({ isOpen, onClose, onSave, editPatient = null }) {
+  const isEditMode = !!editPatient;
 
+  const getInitialData = () => {
+    if (editPatient) {
+      return {
+        name: editPatient.name || "",
+        age: editPatient.age || "",
+        gender: editPatient.gender || "Male",
+        risk: editPatient.risk || "MEDIUM",
+        phone: editPatient.phone || "",
+        address: editPatient.address || "",
+        bloodGroup: editPatient.bloodGroup || "O+",
+        allergies: editPatient.allergies || "None",
+        mainIssue: editPatient.mainIssue || "",
+      };
+    }
+    return {
+      name: "",
+      age: "",
+      gender: "Male",
+      risk: "MEDIUM",
+      phone: "",
+      address: "",
+      bloodGroup: "O+",
+      allergies: "None",
+      mainIssue: "",
+    };
+  };
+
+  const [formData, setFormData] = useState(getInitialData());
   const [error, setError] = useState("");
+
+  // Reset form when modal opens/closes or editPatient changes
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(getInitialData());
+      setError("");
+    }
+  }, [isOpen, editPatient]);
 
   if (!isOpen) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (error) setError("");
   };
 
   const handleSubmit = (e) => {
@@ -41,18 +77,8 @@ export default function PatientForm({ isOpen, onClose, onSave }) {
     setError("");
     onSave({
       ...formData,
+      age: parseInt(formData.age) || 30,
       mainIssue: formData.mainIssue.trim() || "General Clinical Consultation",
-    });
-    setFormData({
-      name: "",
-      age: "",
-      gender: "Male",
-      risk: "MEDIUM",
-      phone: "",
-      address: "",
-      bloodGroup: "O+",
-      allergies: "None",
-      mainIssue: "",
     });
   };
 
@@ -62,7 +88,14 @@ export default function PatientForm({ isOpen, onClose, onSave }) {
         <div className="simple-modal-header">
           <div className="modal-title-with-icon">
             <UserIcon size={20} />
-            <h3>Add New Patient</h3>
+            <div>
+              <h3>{isEditMode ? "Edit Patient Details" : "Add New Patient"}</h3>
+              {isEditMode && (
+                <span className="modal-sub">
+                  Patient: <strong>{editPatient.name}</strong> ({editPatient.id})
+                </span>
+              )}
+            </div>
           </div>
           <button className="modal-close-btn" onClick={onClose}>
             <XIcon size={18} />
@@ -207,7 +240,7 @@ export default function PatientForm({ isOpen, onClose, onSave }) {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Save Patient
+              {isEditMode ? "Save Changes" : "Save Patient"}
             </button>
           </div>
         </form>

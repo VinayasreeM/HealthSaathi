@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { currentDoctor, getNotifications } from "../../data/doctorMockData";
+import { currentDoctor, setCurrentDoctorFromUser, getNotifications } from "../../data/doctorMockData";
 import {
   BellIcon,
   CalendarIcon,
@@ -14,9 +14,26 @@ import {
 export default function DoctorLayout({ children, activePageTitle = "Doctor Dashboard" }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const notifications = getNotifications();
+
+  // Sync logged-in user info with the doctor mock data on mount & when user changes
+  useEffect(() => {
+    if (user) {
+      setCurrentDoctorFromUser(user);
+    }
+  }, [user]);
+
+  // Derive display values from the logged-in user, with fallback to currentDoctor
+  const doctorName = user?.name || currentDoctor.name;
+  const doctorInitials = (user?.name || currentDoctor.name)
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+  const doctorRole = currentDoctor.title;
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to sign out from the Doctor Portal?")) {
@@ -86,10 +103,10 @@ export default function DoctorLayout({ children, activePageTitle = "Doctor Dashb
 
         {/* Doctor Bottom Profile */}
         <div className="sidebar-doctor-profile">
-          <div className="doc-avatar-circle">{currentDoctor.avatarInitials || "DR"}</div>
+          <div className="doc-avatar-circle">{doctorInitials}</div>
           <div className="doc-profile-text">
-            <span className="doc-name">{currentDoctor.name}</span>
-            <span className="doc-role">{currentDoctor.title}</span>
+            <span className="doc-name">{doctorName}</span>
+            <span className="doc-role">{doctorRole}</span>
           </div>
         </div>
       </aside>
@@ -100,7 +117,7 @@ export default function DoctorLayout({ children, activePageTitle = "Doctor Dashb
         <header className="doctor-top-bar">
           <div>
             <h1 className="main-title">{activePageTitle}</h1>
-            <p className="main-greeting">Good morning, {currentDoctor.name}</p>
+            <p className="main-greeting">Good morning, {doctorName}</p>
           </div>
 
           <div className="top-bar-actions">

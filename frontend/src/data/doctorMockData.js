@@ -6,11 +6,28 @@ const STORAGE_KEYS = {
   APPOINTMENTS: "healthsaathi_doc_appointments_v3",
 };
 
+// Default doctor info (overridden at login by the actual logged-in user)
 export const currentDoctor = {
   name: "Dr. Rahul",
   title: "General Physician",
   hospital: "HealthSaathi Medical Center",
   avatarInitials: "DR",
+  regNumber: "MC-2024-1847",
+};
+
+/**
+ * Updates the current doctor info from the logged-in user data.
+ * Call this after login to reflect the actual user's name.
+ */
+export const setCurrentDoctorFromUser = (user) => {
+  if (!user) return;
+  currentDoctor.name = user.name || currentDoctor.name;
+  currentDoctor.avatarInitials = (user.name || "DR")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 };
 
 // Exactly 20 Initial Patients: 4 HIGH, 7 MEDIUM, 9 LOW
@@ -773,6 +790,18 @@ export const addNewPatient = (patientData) => {
   const updated = [newPatient, ...list];
   localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(updated));
   return newPatient;
+};
+
+export const updatePatient = (patientId, updates) => {
+  const list = getPatients();
+  const idx = list.findIndex(
+    (p) => String(p.id).toLowerCase() === String(patientId).toLowerCase()
+  );
+  if (idx === -1) return null;
+
+  list[idx] = { ...list[idx], ...updates, id: list[idx].id };
+  localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(list));
+  return list[idx];
 };
 
 export const getFollowUps = () => {

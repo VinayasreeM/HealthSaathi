@@ -17,6 +17,9 @@ import CreatePrescription from "../pages/doctor/CreatePrescription";
 import Appointments from "../pages/doctor/Appointments";
 import FollowUps from "../pages/doctor/FollowUps";
 
+// Patient Pages
+import PatientDashboard from "../pages/patient/PatientDashboard";
+
 /**
  * Root Landing Redirect
  * Sends users to the correct dashboard based on their role,
@@ -130,12 +133,20 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Patient Protected Route (placeholder until patient branch merges) */}
+        {/* Patient Protected Routes */}
         <Route
           path="/patient"
           element={
             <ProtectedRoute allowedRoles={["patient"]}>
               <Navigate to="/patient/dashboard" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patient/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]}>
+              <PatientDashboard />
             </ProtectedRoute>
           }
         />
