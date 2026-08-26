@@ -7,18 +7,20 @@ const {
   updateMedicationStatus,
 } = require("../controllers/medicationController");
 
+const authMiddleware = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
 // Create a medication
-router.post("/", createMedication);
+router.post("/", authMiddleware, createMedication);
 
 // Get all medications for a patient
-router.get("/patient/:id", getPatientMedications);
+router.get("/patient/:id", authMiddleware, getPatientMedications);
 
 // Get active medications for a patient
-router.get("/patient/:id/active", getActiveMedications);
+router.get("/patient/:id/active", authMiddleware, getActiveMedications);
 
 // Update medication active/inactive status
-router.patch("/:id/status", updateMedicationStatus);
+router.patch("/:id/status", authMiddleware, updateMedicationStatus);
 
 module.exports = router;

@@ -6,12 +6,14 @@ const {
   getMedicalRecord,
 } = require("../controllers/medicalRecordController");
 
+const authMiddleware = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-router.post("/", createMedicalRecord);
+router.post("/", authMiddleware, createMedicalRecord);
 
-router.get("/patient/:id", getPatientMedicalRecords);
+router.get("/patient/:id", authMiddleware, getPatientMedicalRecords);
 
-router.get("/:id", getMedicalRecord);
+router.get("/:id", authMiddleware, getMedicalRecord);
 
 module.exports = router;

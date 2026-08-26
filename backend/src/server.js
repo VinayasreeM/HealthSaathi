@@ -1,9 +1,5 @@
 require("dotenv").config();
 
-const dns = require("dns");
-
-dns.setServers(["10.62.251.48"]);
-
 const app = require("./app");
 const connectDB = require("./config/db");
 const { startReminderScheduler } = require("./services/reminderService");

@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DoctorLayout from "../../components/doctor/DoctorLayout";
 import PrescriptionForm from "../../components/doctor/PrescriptionForm";
+import PatientForm from "../../components/doctor/PatientForm";
 import {
   getPatientById,
   savePatientPrescription,
+  updatePatient,
 } from "../../data/doctorMockData";
 import {
   ActivityIcon,
@@ -27,6 +29,7 @@ export default function PatientDetails() {
 
   const [patient, setPatient] = useState(null);
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [isEditPatientOpen, setIsEditPatientOpen] = useState(false);
   const [successToast, setSuccessToast] = useState("");
 
   const refreshPatient = () => {
@@ -63,6 +66,16 @@ export default function PatientDetails() {
     }, 4000);
   };
 
+  const handleSavePatient = (patientData) => {
+    updatePatient(patient.id, patientData);
+    setIsEditPatientOpen(false);
+    refreshPatient();
+    setSuccessToast("Patient details updated successfully.");
+    setTimeout(() => {
+      setSuccessToast("");
+    }, 4000);
+  };
+
   const hasPrescription = !!patient.prescription;
   const riskClass =
     patient.risk === "HIGH"
@@ -84,16 +97,27 @@ export default function PatientDetails() {
             <span>Back</span>
           </button>
 
-          {/* Action Button: Edit or Add / Update Prescription */}
-          <button
-            className="btn btn-primary"
-            onClick={() => setIsPrescriptionModalOpen(true)}
-          >
-            <FilePlusIcon size={16} />
-            <span>
-              {hasPrescription ? "Edit Prescription" : "Add / Update Prescription"}
-            </span>
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            {/* Edit Patient Details */}
+            <button
+              className="btn btn-outline"
+              onClick={() => setIsEditPatientOpen(true)}
+            >
+              <UserIcon size={16} />
+              <span>Edit Patient</span>
+            </button>
+
+            {/* Action Button: Edit or Add / Update Prescription */}
+            <button
+              className="btn btn-primary"
+              onClick={() => setIsPrescriptionModalOpen(true)}
+            >
+              <FilePlusIcon size={16} />
+              <span>
+                {hasPrescription ? "Edit Prescription" : "Add / Update Prescription"}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Success Alert */}
@@ -321,6 +345,14 @@ export default function PatientDetails() {
             </section>
           </div>
         </div>
+
+        {/* Modal: Edit Patient Details */}
+        <PatientForm
+          isOpen={isEditPatientOpen}
+          editPatient={patient}
+          onClose={() => setIsEditPatientOpen(false)}
+          onSave={handleSavePatient}
+        />
 
         {/* Modal: Write or Edit Prescription */}
         <PrescriptionForm
